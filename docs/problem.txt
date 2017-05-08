@@ -1,0 +1,20 @@
+HackerRank ::: Indexing the Globe
+
+1) Download and parse the data set, hosted here:
+
+	http://download.geonames.org/export/dump/cities1000.zip
+
+	For further reference on what all that information actually means, check out the expanded
+	description in the readme: http://download.geonames.org/export/dump
+
+2) Build out an API that showcases the following functionality:
+* Proximity Query
+	* Given a City identifier X query for the k closest cities where closeness is
+	measured using an appropriately chosen measure of distance by latitude and
+	longitude.
+	* Support restricting the above query by country.
+* Lexical Query
+	* Given an input word, return any cities that match contain that word
+	* Support multiple words, treating each one independently (e.g. The query
+	"taco bell" would be treated as "taco" AND "bell")
+

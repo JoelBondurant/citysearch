@@ -1,0 +1,7 @@
+*pycache*
+*_checkpoints
+.breakcache
+cities1000.txt
+city_altnames.tsv
+*TakeHomeProject.pdf
+*.log
