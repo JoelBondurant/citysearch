@@ -13,4 +13,10 @@ RUN pip install -U pip \
 	&& pip install -U requests sanic \
 	&& pip install -U mysqlclient
 
+RUN pip install -U ipython ipdb sqlalchemy
+RUN apt-get install -y vim less
 
+EXPOSE 8080
+COPY . /usr/local/citysearch/
+WORKDIR /usr/local/citysearch
+CMD ["/usr/local/citysearch/webapi.py"]

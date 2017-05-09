@@ -75,6 +75,30 @@ def start_sphinx(args):
 	print('%s started.' % CONTAINER_NAME)
 
 
+def start_citysearch(args):
+	cname = 'CitySearch'
+	CONTAINER_NAME = cname
+	container_name = cname.lower()
+	pre_start(cname, args)
+	print('%s starting...' % CONTAINER_NAME)
+	startCmd = 'docker run '
+	startCmd += '--name=%s ' % container_name
+	startCmd += '-h %s ' % container_name
+	startCmd += '--restart=always '
+	startCmd += '-v /tmp/citysearch:/tmp/citysearch '
+	startCmd += '-v /var/log/citysearch:/var/log/citysearch '
+	startCmd += '--link sphinx:sphinx '
+	startCmd += '--link mariadb:mariadb '
+	startCmd += '-d %s' % container_name
+	if args.new:
+		if args.echo:
+			print('Start cmd:\n' + startCmd)
+		sp.call(startCmd, shell = True)
+	else:
+		sp.call(['docker','start',container_name])
+	print('%s started.' % CONTAINER_NAME)
+
+
 def main():
 	""" Main entry point to start. """
 	desc = """Service start manager, Docker-Compose is still a mess."""
@@ -85,10 +109,21 @@ def main():
 	ap.add_argument('-p', '--prompt', action = 'store_true', default = False, help = 'Prompt for secrets.')
 	ap.add_argument('-r', '--restart', action = 'store_true', default = False, help = 'Restart process.')
 	ap.add_argument('-s', '--stop', action = 'store_true', default = False, help = 'Stop process.')
+	ap.add_argument('-mdb', '--mariadb', action = 'store_true', default = False, help = 'MariaDB.')
+	ap.add_argument('-spx', '--sphinx', action = 'store_true', default = False, help = 'SphinxSearch.')
+	ap.add_argument('-web', '--web', action = 'store_true', default = False, help = 'CitySearch web api.')
+	ap.add_argument('-all', '--all', action = 'store_true', default = False, help = 'Start all services.')
 	args = ap.parse_args()
-	#start_mariadb(args)
-	start_sphinx(args)
-	#start_citysearch(args)
+	if args.mariadb:
+		start_mariadb(args)
+	if args.sphinx:
+		start_sphinx(args)
+	if args.web:
+		start_citysearch(args)
+	if args.all:
+		start_mariadb(args)
+		start_sphinx(args)
+		start_citysearch(args)
 
 
 if __name__ == '__main__':

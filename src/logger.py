@@ -4,7 +4,7 @@ A module to centralize logging settings.
 
 import os, sys, logging, datetime, inspect, traceback
 
-LOGGING_ROOT = '.'
+LOGGING_ROOT = '/var/log/citysearch'
 
 class TermColor:
 	HEADER = '\033[95m'

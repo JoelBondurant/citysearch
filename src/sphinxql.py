@@ -1,52 +1,31 @@
 """
-A module to connect to MariaDB.
+A module to connect to Sphinx.
 """
 import os
-import re
-import sys
 import time
-import collections
 from warnings import filterwarnings
 
 import MySQLdb
-import cachetools.func
 
 try:
 	import logger
 except ImportError:
 	pass
 
-try:
-	import tabulate
-except ImportError:
-	pass
-
-try:
-	import pandas as pd, pandas
-except ImportError:
-	pass
-
-try:
-	import sqlalchemy
-except ImportError:
-	pass
-
 filterwarnings('ignore', category = MySQLdb.Warning)
 
-class SQL:
-	""" Class to manage SQL connections. """
-	DEFAULT_DB = 'citysearch'
+class SphinxQL:
+	""" Class to manage SphinxQL connections. """
+	DEFAULT_DB = 'rt'
 
 	def __init__(
-			self, db = DEFAULT_DB, host = None, port = None, user = None,
-			passwd = None, autocommit = False, printsql = False,
+			self, db = DEFAULT_DB, host = None, port = None,
+			autocommit = False, printsql = False,
 			use_unicode = True, charset = 'utf8', managed = True,
-			alchemy = False, connect = True, autoretry = True, retryperiod = 240):
+			autoretry = True, retryperiod = 240):
 		self.db = db
-		self.host = host or os.getenv('SQL_HOST', 'mariadb')
-		self.user = user or os.getenv('SQL_USER', 'root')
-		self.passwd = passwd or os.getenv('SQL_PASS', 'citysearch123456')
-		self.port = port or int(os.getenv('SQL_PORT', 3306))
+		self.host = host or os.getenv('SQL_HOST', 'sphinx')
+		self.port = port or int(os.getenv('SQL_PORT', 9306))
 		self.printsql = printsql
 		self.autocommit = autocommit
 		self.autoretry = autoretry
@@ -54,27 +33,16 @@ class SQL:
 		self.use_unicode = use_unicode
 		self.charset = charset
 		self.managed = managed
-		self.alchemy = alchemy
-		self.alchemy_engine = None
-		if not connect:
-			return
-		if not alchemy:
-			self.conn = MySQLdb.connect(
-				host=self.host, port=self.port, user=self.user,
-				passwd=self.passwd, db=self.db, use_unicode = self.use_unicode,
-				charset = self.charset)
-			self.conn.autocommit(self.autocommit)
-			self.conn.set_character_set(self.charset)
-			sqlsetup = "SET NAMES utf8; "
-			sqlsetup += "SET CHARACTER SET %s; " % self.charset
-			sqlsetup += "SET character_set_connection = %s; " % self.charset
-			sqlsetup += "SET collation_connection = 'utf8_bin'; "
-			self.execute(sqlsetup)
-		else:
-			constr_base = 'mysql+mysqldb://%s:%s@%s:%s/%s?charset=%s'
-			constr = constr_base % (self.user, self.passwd, self.host, self.port, self.db, self.charset)
-			ae = sqlalchemy.create_engine(constr, encoding = self.charset)
-			self.alchemy_engine = ae
+		self.conn = MySQLdb.connect(
+			host=self.host, port=self.port,
+			use_unicode = self.use_unicode, charset = self.charset)
+		self.conn.autocommit(self.autocommit)
+		self.conn.set_character_set(self.charset)
+		sqlsetup = "SET NAMES utf8; "
+		sqlsetup += "SET CHARACTER SET %s; " % self.charset
+		sqlsetup += "SET character_set_connection = %s; " % self.charset
+		sqlsetup += "SET collation_connection = 'utf8_bin'; "
+		self.execute(sqlsetup)
 
 
 	def __del__(self):
@@ -344,7 +312,6 @@ class SQL:
 
 	_singletons = {}
 	@staticmethod
-	@cachetools.func.ttl_cache(maxsize = 256)
 	def singleton(key = None, db = DEFAULT_DB):
 		""" Generate/get a singleton sql connection instance. """
 		if key == None:
@@ -379,14 +346,4 @@ class SQL:
 		sqltxt = 'SELECT ' + ','.join(columns)
 		sqltxt += '\nFROM %s;\n' % table_name
 		return sqltxt
-
-
-	def copy_table(self, src_table, src_columns, dst_table, dst_columns = None, dst_upsertable = None):
-		""" Copy a small sql table. """
-		if not dst_columns:
-			dst_columns = src_columns
-		src_data = self.fetchall(SQL.generate_select(src_table, src_columns))
-		lastrowid = self.executemany(SQL.generate_insert(dst_table, dst_columns, dst_upsertable), src_data)
-		self.commit()
-		return lastrowid
 
