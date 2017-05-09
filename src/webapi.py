@@ -35,7 +35,6 @@ async def count(req):
 	return json({'count':cnt})
 
 
-
 @webapi.route('/v0/city/proximity_search')
 async def proximity_search(req):
 	'''
@@ -60,6 +59,22 @@ async def proximity_search(req):
 		ccode = None
 	rs = cityapi.proximity_search(akey, avalue, k, ccode)
 	return json(rs)
+
+
+@webapi.route('/v0/city/text_search')
+async def text_search(req):
+	'''
+	Full text search for cities:
+	example:
+	http://citysearch:8080/v0/city/text_search?q="San Francisco"
+	'''
+	if 'q' in req.args:
+		q = req.args['q'][0]
+	else:
+		return json({})
+	rs = cityapi.text_search(q)
+	return json(rs)
+
 
 
 def main():

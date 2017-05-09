@@ -148,13 +148,17 @@ class CityAPI:
 	def __init__(self):
 		""" Load data into databases and cache."""
 		time.sleep(4) # Wait a sec for databases...
-		bootstrap()
+		df = bootstrap()
+		self.df = df
+		self.df_geonameid = df.set_index('geonameid')
 
 
 	def keyval_search(self, akey, avalue, country_code = None):
+		""" Base city lookup. """
 		if akey not in colset():
-			
-			return {} # No SQL injection here.
+			return None # No SQL injection here.
+		if akey == 'geonameid':
+			return int(df.geonameid.loc[avalue].id)
 		try:
 			sql = SQL.singleton()
 			if country_code:
@@ -169,10 +173,11 @@ class CityAPI:
 
 
 	def proximity_search(self, akey, avalue, k, country_code = None):
+		""" MariaDB based proximity search. """
 		if akey not in colset():
-			return 1
+			return {}
 		if country_code and len(country_code) != 2:
-			return 2
+			return {}
 		k = int(k)
 		city_id = self.keyval_search(akey, avalue, country_code)
 		sqltxt = 'proximity_search'
@@ -181,4 +186,15 @@ class CityAPI:
 		rs = sql.fetchproc(sqltxt, params, jsonify = True)
 		return rs
 
+
+	def text_search(self, atext):
+		""" SphinxQL based text search. """
+		spx = SphinxQL.singleton()
+		atext = sphinx_escape(atext)
+		city_ids = spx.fetchall("SELECT id FROM rt WHERE MATCH('"+atext+"')")
+		city_ids = [str(int(x[0])) for x in city_ids] # Ensure these are safe.
+		city_ids = ','.join(city_ids)
+		sql = SQL.singleton()
+		rs = sql.fetchall('SELECT * FROM City WHERE id IN ('+city_ids+');', jsonify = True)
+		return rs
 

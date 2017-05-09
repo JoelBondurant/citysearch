@@ -93,7 +93,7 @@ class SphinxQL:
 
 	def __printsql__(self, sqltxt, args = None):
 		if self.printsql:
-			msg = 'Executing SQL:\n%s' % sqltxt
+			msg = 'Executing SphinxQL:\n%s' % sqltxt
 			if not args is None:
 				msg += '\n args = ' + str(args)
 			logger.info(msg)
@@ -116,7 +116,7 @@ class SphinxQL:
 		self.__printsql__(sqltxt, args)
 		started = time.time()
 		complete = False
-		ex0 = Exception('SQL.execute exception')
+		ex0 = Exception('SphinxQL.execute exception')
 		while (not complete) and time.time() - started < self.retryperiod:
 			try:
 				curs = self.conn.cursor()
@@ -132,7 +132,7 @@ class SphinxQL:
 			if ex0:
 				raise ex0
 			else:
-				raise TimeoutError('Max query time exceeded. SQL execution was not completed.')
+				raise TimeoutError('Max query time exceeded. SphinxQL execution was not completed.')
 		return lastrowid
 
 	def executemany(self, sqltxt, args = None):
@@ -143,7 +143,7 @@ class SphinxQL:
 		self.__printsql__(sqltxt, args)
 		started = time.time()
 		complete = False
-		ex0 = Exception('SQL.executemany exception')
+		ex0 = Exception('SphinxQL.executemany exception')
 		while (not complete) and time.time() - started < self.retryperiod:
 			try:
 				curs = self.conn.cursor()
@@ -159,7 +159,7 @@ class SphinxQL:
 			if ex0:
 				raise ex0
 			else:
-				raise TimeoutError('Max query time exceeded. SQL execution was not completed.')
+				raise TimeoutError('Max query time exceeded. SphinxQL execution was not completed.')
 		return lastrowid
 
 	def callproc(self, sqltxt, args = ()):
@@ -241,13 +241,13 @@ class SphinxQL:
 	@staticmethod
 	def tuples2lists(tx):
 		"""Convert a tuple of tuples to a list of lists."""
-		return list(map(SQL.tuples2lists, tx)) if isinstance(tx, (list, tuple)) else tx
+		return list(map(SphinxSQL.tuples2lists, tx)) if isinstance(tx, (list, tuple)) else tx
 
 	@staticmethod
 	def nullify(obj):
 		"""Convert empty strings to NULL/None."""
 		if obj != None and type(obj) != str and isinstance(obj, collections.Iterable):
-			return list(map(SQL.nullify, obj))
+			return list(map(SphinxQL.nullify, obj))
 		if obj != None and type(obj) == str and re.match(r'^\s*$', obj):
 			return None
 		return obj
@@ -258,7 +258,7 @@ class SphinxQL:
 		"""
 		self.__printsql__(sqltxt)
 		rs = self.fetchall(sqltxt, args, header = True)
-		rs = SQL.tuples2lists(rs)
+		rs = SphinxQL.tuples2lists(rs)
 		if len(rs) == 0:
 			return pandas.DataFrame(columns = rs[0])
 		return pandas.DataFrame(rs[1:], columns = rs[0])
@@ -319,9 +319,9 @@ class SphinxQL:
 		else:
 			conn_key = key
 		conn = None
-		if not conn_key in SQL._singletons:
-			SQL._singletons[conn_key] = SQL(db)
-		conn = SQL._singletons[conn_key]
+		if not conn_key in SphinxQL._singletons:
+			SphinxQL._singletons[conn_key] = SphinxQL(db)
+		conn = SphinxQL._singletons[conn_key]
 		try:
 			conn.ping()
 		except:
