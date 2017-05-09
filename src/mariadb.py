@@ -194,6 +194,21 @@ class SQL:
 				raise TimeoutError('Max query time exceeded. SQL execution was not completed.')
 		return lastrowid
 
+	def _jsonify(self, table_rs):
+		"""A function to take tabular result set data with header and jsonify it."""
+		jout = []
+		header = table_rs[0]
+		for row_num in range(1, len(table_rs)):
+			jout.append({})
+			for col_num in range(len(header)):
+				val = table_rs[row_num][col_num]
+				try:
+					float(val)
+				except:
+					val = str(val)
+				jout[row_num-1][header[col_num]] = val
+		return jout
+
 	def callproc(self, sqltxt, args = ()):
 		"""
 		A method to execute a sql procedure 
@@ -202,6 +217,28 @@ class SQL:
 		curs = self.conn.cursor()
 		curs.callproc(sqltxt, args)
 		curs.close()
+
+	def fetchproc(self, sqltxt, args = (), header = False, jsonify = False):
+		"""
+		A method to execute a sql procedure and return results
+		"""
+		self.__printsql__(sqltxt, args)
+		curs = self.conn.cursor()
+		curs.callproc(sqltxt, args)
+		rsl = []
+		while True:
+				rsp = curs.nextset()
+				if rsp is None:
+					break
+				rs = curs.fetchall()
+				if (header or jsonify) and curs.description is not None:
+					headr = [col_desc[0] for col_desc in curs.description]
+					rs = (tuple(headr),) + rs
+					if jsonify:
+						rs = self._jsonify(rs)
+				rsl += [rs]
+		curs.close()
+		return rsl
 
 	def executeall(self, sqltxtlist):
 		"""
@@ -294,21 +331,6 @@ class SQL:
 		if len(rs) == 0:
 			return pandas.DataFrame(columns = rs[0])
 		return pandas.DataFrame(rs[1:], columns = rs[0])
-
-	def _jsonify(self, table_rs):
-		"""A function to take tabular result set data with header and jsonify it."""
-		jout = []
-		header = table_rs[0]
-		for row_num in range(1, len(table_rs)):
-			jout.append({})
-			for col_num in range(len(header)):
-				val = table_rs[row_num][col_num]
-				try:
-					float(val)
-				except:
-					val = str(val)
-				jout[row_num-1][header[col_num]] = val
-		return jout
 
 	def fetchall(self, sqltxt, args = None, header = False, jsonify = False):
 		"""

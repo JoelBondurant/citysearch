@@ -112,9 +112,11 @@ def to_mariadb(df):
 	except:
 		numrecs = 0
 	if numrecs == 0:
-		with open('./City.sql','r') as fin:
-			sqltxt = fin.read()
-		sql.execute_ddl(sqltxt)
+		sqlsrc = ['City.sql','Haversine.sql','GeoDist.sql','ProximitySearch.sql']
+		for src in sqlsrc:
+			with open('./'+src,'r') as fin:
+				sqltxt = fin.read()
+			sql.execute_ddl(sqltxt)
 		sqltxt = sql.generate_insert('City', df.columns.tolist())
 		vals = df.to_records(index = False)
 		vals = [tuple(x) for x in vals] # < mariadb driver expectations
@@ -149,21 +151,9 @@ class CityAPI:
 		bootstrap()
 
 
-	@staticmethod
-	def geo_dist(lat1, lon1, lat2, lon2):
-		""" Exact geo distance in kilometers (haversine). """
-		lat1, lon1, lat2, lon2 = map(np.radians, [lat1, lon1, lat2, lon2])
-		dlat = lat2 - lat1
-		dlon = lon2 - lon1
-		hs1 = np.sin(dlat/2.0)**2 + np.cos(lat1) * np.cos(lat2) * np.sin(dlon/2.0)**2
-		hs = 2 * np.arcsin(np.sqrt(hs1))
-		km = 6367 * hs
-		return km
-
-
-	@functools.lru_cache(10**6)
 	def keyval_search(self, akey, avalue, country_code = None):
 		if akey not in colset():
+			
 			return {} # No SQL injection here.
 		try:
 			sql = SQL.singleton()
@@ -178,19 +168,17 @@ class CityAPI:
 		return city_id
 
 
-	@functools.lru_cache(100)
 	def proximity_search(self, akey, avalue, k, country_code = None):
 		if akey not in colset():
-			return {}
+			return 1
 		if country_code and len(country_code) != 2:
-			return {}
+			return 2
 		k = int(k)
-		city_id = self.keyval_search(self, akey, avalue, country_code)
-		sqltxt = 'CALL proximity_search(%s, %s, %s);'
-		try:
-			sql = SQL.singleton()
-			return sql.fetchall(sqltxt, (city_id, k, country_code), jsonify = True)
-		except:
-			return {}
+		city_id = self.keyval_search(akey, avalue, country_code)
+		sqltxt = 'proximity_search'
+		sql = SQL.singleton()
+		params = (city_id, k, country_code)
+		rs = sql.fetchproc(sqltxt, params, jsonify = True)
+		return rs
 
 
