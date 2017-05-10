@@ -386,8 +386,10 @@ class SQL:
 			conn.reconnect()
 		return conn
 
+
 	_pool = {}
 	def pool(size = 32, db = DEFAULT_DB):
+		""" Non asyncio friendly quick and dirty connection pool."""
 		n = random.randint(1,size)
 		if n in SQL._pool:
 			conn = SQL._pool[n]

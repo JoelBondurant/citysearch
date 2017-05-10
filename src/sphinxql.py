@@ -328,6 +328,17 @@ class SphinxQL:
 			conn.reconnect()
 		return conn
 
+	_pool = {}
+	def pool(size = 32, db = DEFAULT_DB):
+		""" Non asyncio friendly quick and dirty connection pool."""
+		n = random.randint(1,size)
+		if n in SphinxQL._pool:
+			conn = SphinxQL._pool[n]
+		else:
+			conn = SphinxQL(db)
+			SphinxQL._pool[n] = conn
+		return conn
+
 
 	@staticmethod
 	def generate_insert(table_name, columns, upsert_columns = None):

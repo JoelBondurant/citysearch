@@ -107,8 +107,8 @@ def to_mariadb(df):
 	""" Load city data into MariaDB. """
 	logger.info('Loading city data into MariaDB...')
 	sql = SQL(db = 'mysql')
-	sql.execute('CREATE DATABASE IF NOT EXISTS citysearch;')
-	sql.execute('USE citysearch;')
+	sql.execute_ddl('CREATE DATABASE IF NOT EXISTS citysearch;')
+	sql.execute_ddl('USE citysearch;')
 	try:
 		numrecs = int(sql.fetchone('SELECT COUNT(1) FROM citysearch.City;')[0])
 	except:
@@ -198,7 +198,7 @@ class CityAPI:
 
 	def text_search(self, atext):
 		""" SphinxQL based text search. """
-		spx = SphinxQL.pool()
+		spx = SphinxQL()
 		atext = sphinx_escape(atext)
 		city_ids = spx.fetchall("SELECT id FROM rt WHERE MATCH('"+atext+"')")
 		city_ids = [str(int(x[0])) for x in city_ids] # Ensure these are safe.

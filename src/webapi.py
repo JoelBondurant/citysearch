@@ -66,7 +66,7 @@ async def text_search(req):
 	'''
 	Full text search for cities:
 	example:
-	http://citysearch:8080/v0/city/text_search?q="San Francisco"
+	http://citysearch:8080/v0/city/text_search?q=San%20Francisco
 	'''
 	if 'q' in req.args:
 		q = req.args['q'][0]
