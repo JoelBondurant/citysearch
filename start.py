@@ -85,6 +85,7 @@ def start_citysearch(args):
 	startCmd += '--name=%s ' % container_name
 	startCmd += '-h %s ' % container_name
 	startCmd += '--restart=always '
+	startCmd += '-p 0.0.0.0:8080:8080 '
 	startCmd += '-v /tmp/citysearch:/tmp/citysearch '
 	startCmd += '-v /var/log/citysearch:/var/log/citysearch '
 	startCmd += '--link sphinx:sphinx '

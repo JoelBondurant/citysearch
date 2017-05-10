@@ -104,7 +104,7 @@ def to_sphinx(df):
 def to_mariadb(df):
 	""" Load city data into MariaDB. """
 	logger.info('Loading city data into MariaDB...')
-	sql = SQL()
+	sql = SQL(db = 'mysql')
 	sql.execute('CREATE DATABASE IF NOT EXISTS citysearch;')
 	sql.execute('USE citysearch;')
 	try:
