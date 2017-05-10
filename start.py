@@ -65,6 +65,8 @@ def start_sphinx(args):
 	startCmd += '--name=%s ' % container_name
 	startCmd += '-h %s ' % container_name
 	startCmd += '--restart=always '
+	startCmd += '-p 9306:9306 '
+	startCmd += '-p 9312:9312 '
 	startCmd += '-d %s' % container_name
 	if args.new:
 		if args.echo:
