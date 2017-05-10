@@ -5,6 +5,7 @@ import os
 import re
 import sys
 import time
+import random
 import collections
 from warnings import filterwarnings
 
@@ -385,6 +386,15 @@ class SQL:
 			conn.reconnect()
 		return conn
 
+	_pool = {}
+	def pool(size = 32, db = DEFAULT_DB):
+		n = random.randint(1,size)
+		if n in SQL._pool:
+			conn = SQL._pool[n]
+		else:
+			conn = SQL(db)
+			SQL._pool[n] = conn
+		return conn
 
 	@staticmethod
 	def generate_insert(table_name, columns, upsert_columns = None):

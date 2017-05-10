@@ -43,18 +43,20 @@ def download():
 		zf.extractall(dlpath())
 	logger.info('Download finished.')
 
+col_names = ['geonameid','name','asciiname','altnames','latitude','longitude','feat_class','feat_code']
+col_names += ['country_code', 'cc2', 'admin1_code', 'admin2_code', 'admin3_code', 'admin4_code']
+col_names += ['population','elevation','dem','timezone','modified']
+col_set = set(col_names)
 
 def colnames():
 	""" Column name list from download.geonames.org/export/dump. """
-	colnames = ['geonameid','name','asciiname','altnames','latitude','longitude','feat_class','feat_code']
-	colnames += ['country_code', 'cc2', 'admin1_code', 'admin2_code', 'admin3_code', 'admin4_code']
-	colnames += ['population','elevation','dem','timezone','modified']
-	return colnames
+	return col_names
 
 
+@functools.lru_cache(1)
 def colset():
 	""" A set for the column names for faster column checks. """
-	return set(colnames())
+	return col_set
 
 
 def to_dataframe():
@@ -151,10 +153,11 @@ class CityAPI:
 		time.sleep(4) # Wait a sec for databases...
 		df = bootstrap()
 		self.df = df
-		self.df_geonameid = df.set_index('geonameid')
-		self.df_name = df.set_index('name')
+		self.df_geonameid = df.set_index('geonameid')[['id']]
+		self.df_name = df.set_index('name')[['id']]
 
 
+	#@functools.lru_cache(2**5)
 	def keyval_search(self, akey, avalue, country_code = None):
 		""" Base city lookup. """
 		if akey not in colset():
@@ -166,7 +169,7 @@ class CityAPI:
 		elif akey == 'name':
 			return int(self.df_name.loc[avalue].id)
 		try:
-			sql = SQL.singleton()
+			sql = SQL.pool()
 			if country_code:
 				sqltxt = 'SELECT id FROM City WHERE '+akey+' = %s and country_code = %s;'
 				city_id = int(sql.fetchone(sqltxt, (avalue, country_code))[0])
@@ -187,7 +190,7 @@ class CityAPI:
 		k = int(k)
 		city_id = self.keyval_search(akey, avalue, country_code)
 		sqltxt = 'proximity_search'
-		sql = SQL.singleton()
+		sql = SQL.pool()
 		params = (city_id, k, country_code)
 		rs = sql.fetchproc(sqltxt, params, jsonify = True)
 		return rs[:-1][0]
@@ -195,12 +198,12 @@ class CityAPI:
 
 	def text_search(self, atext):
 		""" SphinxQL based text search. """
-		spx = SphinxQL.singleton()
+		spx = SphinxQL.pool()
 		atext = sphinx_escape(atext)
 		city_ids = spx.fetchall("SELECT id FROM rt WHERE MATCH('"+atext+"')")
 		city_ids = [str(int(x[0])) for x in city_ids] # Ensure these are safe.
 		city_ids = ','.join(city_ids)
-		sql = SQL.singleton()
+		sql = SQL.pool()
 		rs = sql.fetchall('SELECT * FROM City WHERE id IN ('+city_ids+');', jsonify = True)
 		return rs
 

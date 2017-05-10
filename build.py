@@ -34,7 +34,7 @@ def build(cname, args):
 
 def main():
 	desc = """Build Application:  
-	Builds docker containers for CitySearch api and MariaDB."""
+	Builds docker containers for CitySearch API and MariaDB/Sphinx."""
 	argparser = argparse.ArgumentParser(description = desc, add_help = True)
 	argparser.add_argument('-c', '--clean', action = 'store_true', default = False, help = 'Clean build.')
 	argparser.add_argument('-b', '--break_cache', action = 'store_true', default = False, help = 'Break cache.')

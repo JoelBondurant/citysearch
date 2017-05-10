@@ -79,7 +79,7 @@ async def text_search(req):
 
 def main():
 	logger.info('CitySearch webapi started.')
-	workers = (os.cpu_count() * 3) // 4 + 1
+	workers = 8 * os.cpu_count()
 	webapi.run(host = '0.0.0.0', port = 8080, workers = workers, debug = False)
 	logger.info('CitySearch webapi stopped.')
 
