@@ -53,7 +53,6 @@ def colnames():
 	return col_names
 
 
-@functools.lru_cache(1)
 def colset():
 	""" A set for the column names for faster column checks. """
 	return col_set
@@ -103,6 +102,12 @@ def to_sphinx(df):
 	logger.info('Finished Sphinx inserts.')
 
 
+def chunks(l, n):
+	"""Yield successive n-sized chunks from l."""
+	for i in range(0, len(l), n):
+		yield l[i:i + n]
+
+
 def to_mariadb(df):
 	""" Load city data into MariaDB. """
 	logger.info('Loading city data into MariaDB...')
@@ -123,7 +128,9 @@ def to_mariadb(df):
 		sqltxt = sql.generate_insert('City', df.columns.tolist())
 		vals = df.to_records(index = False)
 		vals = [tuple(x) for x in vals] # < mariadb driver expectations
-		sql.executemany(sqltxt, vals)
+		batch_size = 10000
+		for chunk in chunks(vals, batch_size):
+			sql.executemany(sqltxt, chunk)
 		sql.commitclose()
 	else:
 		logger.info('Data exists, skipping.')
