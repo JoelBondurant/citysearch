@@ -152,6 +152,7 @@ class CityAPI:
 		df = bootstrap()
 		self.df = df
 		self.df_geonameid = df.set_index('geonameid')
+		self.df_name = df.set_index('name')
 
 
 	def keyval_search(self, akey, avalue, country_code = None):
@@ -159,7 +160,11 @@ class CityAPI:
 		if akey not in colset():
 			return None # No SQL injection here.
 		if akey == 'geonameid':
-			return int(df.geonameid.loc[avalue].id)
+			return int(self.df_geonameid.loc[avalue].id)
+		if akey == 'name' and country_code and len(country_code) == 2:
+			return int(self.df_name[self.df_name.country_code == country_code].loc[avalue].id)
+		elif akey == 'name':
+			return int(self.df_name.loc[avalue].id)
 		try:
 			sql = SQL.singleton()
 			if country_code:
@@ -185,7 +190,7 @@ class CityAPI:
 		sql = SQL.singleton()
 		params = (city_id, k, country_code)
 		rs = sql.fetchproc(sqltxt, params, jsonify = True)
-		return rs
+		return rs[:-1][0]
 
 
 	def text_search(self, atext):
