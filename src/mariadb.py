@@ -256,6 +256,7 @@ class SQL:
 		"""
 		try:
 			self.execute(sqltxt, args)
+			self.commit()
 		except (MySQLdb.Error, MySQLdb.Warning) as err:
 			logger.debug('Expected DDL Warning:\n' + str(sys.exc_info()))
 			logger.debug(err.args[0])
@@ -270,6 +271,7 @@ class SQL:
 		"""
 		try:
 			self.executeall(sqltxtlist)
+			self.commit()
 		except (MySQLdb.Error, MySQLdb.Warning) as err:
 			logger.debug('Expected DDL Warning:\n' + str(sys.exc_info()))
 			logger.debug(err.args[0])

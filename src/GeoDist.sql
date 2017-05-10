@@ -1,5 +1,4 @@
-DELIMITER $$
-DROP FUNCTION IF EXISTS geo_dist$$
+DROP FUNCTION IF EXISTS geo_dist;
 
 CREATE FUNCTION geo_dist(lat1 FLOAT, lon1 FLOAT, lat2 FLOAT, lon2 FLOAT) RETURNS FLOAT
 	NO SQL DETERMINISTIC
@@ -8,6 +7,5 @@ CREATE FUNCTION geo_dist(lat1 FLOAT, lon1 FLOAT, lat2 FLOAT, lon2 FLOAT) RETURNS
 			measured in degrees.'
 BEGIN
 	RETURN 6371.0088 * haversine(radians(lat1), radians(lon1), radians(lat2), radians(lon2));
-END$$
+END;
 
-DELIMITER ;

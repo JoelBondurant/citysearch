@@ -104,7 +104,7 @@ def to_sphinx(df):
 def to_mariadb(df):
 	""" Load city data into MariaDB. """
 	logger.info('Loading city data into MariaDB...')
-	sql = SQL(user = 'root', passwd = 'citysearch123456', host = 'mariadb', db = 'mysql')
+	sql = SQL()
 	sql.execute('CREATE DATABASE IF NOT EXISTS citysearch;')
 	sql.execute('USE citysearch;')
 	try:
@@ -117,6 +117,7 @@ def to_mariadb(df):
 			with open('./'+src,'r') as fin:
 				sqltxt = fin.read()
 			sql.execute_ddl(sqltxt)
+			sql.commit()
 		sqltxt = sql.generate_insert('City', df.columns.tolist())
 		vals = df.to_records(index = False)
 		vals = [tuple(x) for x in vals] # < mariadb driver expectations

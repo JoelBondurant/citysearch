@@ -1,5 +1,4 @@
-DELIMITER $$
-DROP PROCEDURE IF EXISTS proximity_search$$
+DROP PROCEDURE IF EXISTS proximity_search;
 
 CREATE PROCEDURE proximity_search (IN city_id INT UNSIGNED, k INT UNSIGNED, ccode CHAR(2))
 BEGIN
@@ -34,5 +33,4 @@ BEGIN
 	WHERE (ccode IS NULL) OR (country_code = ccode)
 	ORDER BY geo_dist(@lat, @lon, latitude, longitude) ASC
 	LIMIT k;
-END $$
-DELIMITER ;
+END;
