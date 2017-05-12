@@ -188,7 +188,7 @@ class CityAPI:
 		logger.info('Generating cache indexes...')
 		self.df = df
 		self.df_geonameid = df.set_index('geonameid')[['id']]
-		self.df_name = df.set_index('name')[['id']]
+		self.df_name = df.set_index('name')[['id','country_code']]
 		geoslice = df[['id','longitude','latitude']]
 		rgeo = rtree.Rtree()
 		for i in range(1, len(geoslice)):
