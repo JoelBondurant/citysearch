@@ -7,7 +7,7 @@ import os
 import re
 import time
 import zipfile
-import functools
+import concurrent.futures
 
 import requests
 import numpy as np
@@ -18,61 +18,20 @@ from mariadb import SQL
 from sphinxql import SphinxQL
 
 
-
-### DATA LOADING ###
-
-def dlpath():
-	""" Download path."""
-	return '/tmp/citysearch'
-
-
-def srcfile():
-	""" Full source file path."""
-	return os.path.join(dlpath(), 'cities1000.txt')
-
-
-def download():
-	""" Download city data from web source."""
-	logger.info('Download starting...')
-	if os.path.isfile(srcfile()):
-		logger.info('Using cache.')
-	else:
-		zurl = 'http://download.geonames.org/export/dump/cities1000.zip'
-		rz = requests.get(zurl)
-		zf = zipfile.ZipFile(io.BytesIO(rz.content))
-		zf.extractall(dlpath())
-	logger.info('Download finished.')
-
+# Statics:
 col_names = ['geonameid','name','asciiname','altnames','latitude','longitude','feat_class','feat_code']
 col_names += ['country_code', 'cc2', 'admin1_code', 'admin2_code', 'admin3_code', 'admin4_code']
 col_names += ['population','elevation','dem','timezone','modified']
 col_set = set(col_names)
 
+
 def colnames():
 	""" Column name list from download.geonames.org/export/dump. """
 	return col_names
 
-
 def colset():
 	""" A set for the column names for faster column checks. """
 	return col_set
-
-
-def to_dataframe():
-	""" Parse csv with Pandas. """
-	cols = colnames()
-	df = pd.read_csv(srcfile(), sep = '\t', header = None, names = cols, index_col = False, low_memory = False)
-	df = df.astype(object).where(pd.notnull(df), None)
-	df.latitude = df.latitude.astype('float32')
-	df.longitude = df.longitude.astype('float32')
-	#df.population = df.population.astype('uint64')
-	#df.elevation = df.elevation.astype('float32')
-	df.reset_index(drop = False, inplace = True)
-	df.rename(columns = {'index':'id'}, inplace = True)
-	df.id = df.id + 1 # Sphinx doesnt like 0 based indexing
-	assert df.shape[1] == len(cols) + 1
-	return df
-
 
 def sphinx_escape(astr):
 	""" Sphinx needs help escaping strings."""
@@ -80,74 +39,135 @@ def sphinx_escape(astr):
 		return astr
 	return re.sub(r"([=\(\)|\-!@~\"&/\\\^\$\=])", r"\\\1", astr)
 
-
-def to_sphinx(df):
-	""" Defer the city altnames to Sphinx. """
-	logger.info('Inserting city altnames to Sphinx.')
-	dg = df[['id','altnames']].copy()
-	dg = dg[~dg.altnames.isnull()]
-	dg.altnames = dg.altnames.apply(sphinx_escape)
-	dg['pk'] = dg.id
-	dm = dg.as_matrix()
-	sql = SphinxQL()
-	numrecs = int(sql.fetchone('SELECT COUNT(*) FROM rt')[0])
-	if numrecs == 0:
-		sqltxt = 'INSERT INTO rt VALUES (%s, %s, %s)'
-		for x in dm:
-			params = tuple(x.tolist())
-			sql.execute(sqltxt, params)
-		sql.commitclose()
-	else:
-		logger.info('Data exists, skipping.')
-	logger.info('Finished Sphinx inserts.')
-
-
 def chunks(l, n):
 	"""Yield successive n-sized chunks from l."""
 	for i in range(0, len(l), n):
 		yield l[i:i + n]
 
 
-def to_mariadb(df):
-	""" Load city data into MariaDB. """
-	logger.info('Loading city data into MariaDB...')
-	sql = SQL(db = 'mysql')
-	sql.execute_ddl('CREATE DATABASE IF NOT EXISTS citysearch;')
-	sql.execute_ddl('USE citysearch;')
-	try:
-		numrecs = int(sql.fetchone('SELECT COUNT(1) FROM citysearch.City;')[0])
-	except:
-		numrecs = 0
-	if numrecs == 0:
-		sqlsrc = ['City.sql','Haversine.sql','GeoDist.sql','ProximitySearch.sql']
-		for src in sqlsrc:
-			with open('./'+src,'r') as fin:
-				sqltxt = fin.read()
-			sql.execute_ddl(sqltxt)
-			sql.commit()
-		sqltxt = sql.generate_insert('City', df.columns.tolist())
-		vals = df.to_records(index = False)
-		vals = [tuple(x) for x in vals] # < mariadb driver expectations
-		batch_size = 10000
-		for chunk in chunks(vals, batch_size):
-			sql.executemany(sqltxt, chunk)
-		sql.commitclose()
-	else:
-		logger.info('Data exists, skipping.')
-	logger.info('Finished loading city data into MariaDB.')
+
+class DataLoader:
+
+	def dlpath(self):
+		""" Download path."""
+		return '/tmp/citysearch'
+
+	def srcfile(self):
+		""" Full source file path."""
+		return os.path.join(self.dlpath(), 'cities1000.txt')
+
+	def download(self):
+		""" Download city data from web source."""
+		logger.info('Download starting...')
+		if os.path.isfile(self.srcfile()):
+			logger.info('City csv exists, skipping donwload...')
+		else:
+			zurl = 'http://download.geonames.org/export/dump/cities1000.zip'
+			rz = requests.get(zurl)
+			zf = zipfile.ZipFile(io.BytesIO(rz.content))
+			zf.extractall(self.dlpath())
+		logger.info('Download finished.')
+
+	def to_dataframe(self):
+		""" Parse csv with Pandas. """
+		cols = colnames()
+		df = pd.read_csv(self.srcfile(), sep = '\t', header = None, names = cols, index_col = False, low_memory = False)
+		df = df.astype(object).where(pd.notnull(df), None)
+		df.latitude = df.latitude.astype('float32')
+		df.longitude = df.longitude.astype('float32')
+		#df.population = df.population.astype('uint64')
+		#df.elevation = df.elevation.astype('float32')
+		df.reset_index(drop = False, inplace = True)
+		df.rename(columns = {'index':'id'}, inplace = True)
+		df.id = df.id + 1 # Sphinx doesnt like 0 based indexing
+		assert df.shape[1] == len(cols) + 1
+		return df
+
+	def to_sphinx(self, df):
+		""" Defer the city altnames to Sphinx. """
+		logger.info('Inserting city data into Sphinx...')
+		dg = df[['id','altnames']].copy()
+		dg = dg[~dg.altnames.isnull()]
+		dg.altnames = dg.altnames.apply(sphinx_escape)
+		dg['pk'] = dg.id
+		dm = dg.as_matrix()
+		sql = SphinxQL()
+		numrecs = int(sql.fetchone('SELECT COUNT(*) FROM rt')[0])
+		if numrecs == 0:
+			sqltxt = 'INSERT INTO rt VALUES (%s, %s, %s)'
+			for x in dm:
+				params = tuple(x.tolist())
+				sql.execute(sqltxt, params)
+			sql.commitclose()
+		else:
+			logger.info('Sphinx data exists, skipping.')
+		logger.info('Finished Sphinx inserts.')
+
+	def ddl_mariadb(self):
+		""" Throw DDL at MariaDB. """
+		logger.info('Preparing MariaDB DDL...')
+		printsql = False
+		sql_zero = lambda: SQL(db = 'mysql', printsql = printsql, autocommit = True, autoretry = False)
+		sql_zero().execute_ddl('CREATE DATABASE IF NOT EXISTS citysearch;')
+		time.sleep(2)
+		sql_ddl = lambda: SQL(printsql = printsql, autocommit = True, autoretry = False)
+		try:
+			numrecs = int(sql_ddl().fetchone('SELECT COUNT(1) FROM citysearch.City;')[0])
+		except:
+			numrecs = 0
+		if numrecs == 0:
+			sqlsrc = ['Start.sql','City.sql','Haversine.sql','GeoDist.sql','ProximitySearch.sql']
+			for src in sqlsrc:
+				with open('./'+src,'r') as fin:
+					sqltxt = fin.read()
+				for sqltxt_part in sqltxt.split('#split#'):
+					if sqltxt_part.strip() != '':
+						sql_ddl().execute_ddl(sqltxt_part)
+			time.sleep(2)
+		logger.info('MariaDB DDL applied.')
+
+	def to_mariadb(self, df):
+		""" Load city data into MariaDB. """
+		logger.info('Inserting city data into MariaDB...')
+		sql = lambda: SQL(printsql = False, autocommit = False, autoretry = True)
+		try:
+			numrecs = int(sql().fetchone('SELECT COUNT(1) FROM citysearch.City;')[0])
+		except:
+			numrecs = 0
+		if numrecs == 0:
+			sqltxt = SQL.generate_insert('City', df.columns.tolist())
+			vals = df.to_records(index = False)
+			vals = [tuple(x) for x in vals] # < mariadb driver expectations
+			batch_size = 10000
+			sqlconn = sql()
+			for chunk in chunks(vals, batch_size):
+				sqlconn.executemany(sqltxt, chunk)
+			sqlconn.commitclose()
+		else:
+			logger.info('MariaDB data exists, skipping.')
+		logger.info('Finished MariaDB inserts.')
+
+	def persist(self):
+		logger.info('City data persistence started.')
+		self.ddl_mariadb()
+		df_mdb = self.to_dataframe()
+		df_spx = df_mdb[['id','altnames']].copy()
+		df_mdb.altnames = df_mdb.altnames.str[:200]
+		with concurrent.futures.ThreadPoolExecutor(max_workers = 2) as ex:
+			ex.submit(self.to_mariadb, df_mdb)
+			ex.submit(self.to_sphinx, df_spx)
+		logger.info('City data persistence finished.')
+		return df_mdb
 
 
 def bootstrap():
 	""" Bootstrap the citysearch app. """
 	logger.info('Bootstrapping CitySearch...')
-	download()
-	df = to_dataframe()
-	to_sphinx(df)
-	df.altnames = df.altnames.str[:200]
-	to_mariadb(df)
-	time.sleep(1)
-	logger.info('CitySearch data is loaded.')
-	return df
+	dl = DataLoader()
+	dl.download()
+	webcache = dl.persist()
+	logger.info('Bootstrapping is complete.')
+	return webcache
 
 
 
@@ -164,7 +184,6 @@ class CityAPI:
 		self.df_name = df.set_index('name')[['id']]
 
 
-	#@functools.lru_cache(2**5)
 	def keyval_search(self, akey, avalue, country_code = None):
 		""" Base city lookup. """
 		if akey not in colset():

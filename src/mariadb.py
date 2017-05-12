@@ -155,12 +155,13 @@ class SQL:
 				curs = self.conn.cursor()
 				curs.execute(sqltxt, args)
 				lastrowid = curs.lastrowid
-				curs.close()
 				complete = True
 			except Exception as ex:
 				ex0 = ex
 				print(ex)
 				time.sleep(10)
+			finally:
+				curs.close()
 		if not complete:
 			if ex0:
 				raise ex0
@@ -182,12 +183,13 @@ class SQL:
 				curs = self.conn.cursor()
 				curs.executemany(sqltxt, args)
 				lastrowid = curs.lastrowid
-				curs.close()
 				complete = True
 			except Exception as ex:
 				ex0 = ex
 				print(ex)
 				time.sleep(10)
+			finally:
+				curs.close()
 		if not complete:
 			if ex0:
 				raise ex0

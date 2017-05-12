@@ -1,5 +1,5 @@
 DROP FUNCTION IF EXISTS haversine;
-
+#split#
 CREATE FUNCTION haversine(lat1 FLOAT, lon1 FLOAT, lat2 FLOAT, lon2 FLOAT) RETURNS FLOAT
 	NO SQL DETERMINISTIC
 	COMMENT 'Returns the distance in radians on a sphere

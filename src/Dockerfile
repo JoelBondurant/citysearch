@@ -9,12 +9,13 @@ RUN apt-get install -y mariadb-client-10.0 libmysqlclient-dev vim less
 
 # Add Python extras:
 RUN pip install -U pip \
-	&& pip install -U numpy pandas ipython ipdb \
-	&& pip install -U cachetools requests sanic \
-	&& pip install -U sqlalchemy mysqlclient aiomysql
+	&& pip install -U cython numpy pandas ipython ipdb \
+	&& pip install -U requests sanic aiohttp aiodns \
+	&& pip install -U sqlalchemy mysqlclient aiomysql \
+	&& pip install -U cachetools aiocache
 
 EXPOSE 8080
 COPY . /usr/local/citysearch/
 RUN ln -s /usr/local/citysearch/webapi.py /usr/bin/webapi
 WORKDIR /usr/local/citysearch
-CMD ["/usr/local/citysearch/webapi.py"]
+CMD ["webapi"]

@@ -120,27 +120,38 @@ def pre():
 		elif env_level == 'NOTSET':
 			_logr.logr.setLevel(logging.NOTSET)
 
+
+def post():
+	pass
+
+
 def info(msg):
 	pre()
 	_logr.info(msg)
+	post()
 
 def debug(msg):
 	pre()
 	_logr.debug(msg)
+	post()
 
 def warn(msg):
 	pre()
 	_logr.warn(msg)
+	post()
 
 def error(msg):
 	pre()
 	_logr.error(msg)
+	post()
 
 def critical(msg):
 	pre()
 	_logr.critical(msg)
+	post()
 
 def exception(ex, msg = 'EXCEPTION:'):
 	pre()
 	_logr.exception(ex, msg)
+	post()
 

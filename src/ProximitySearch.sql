@@ -1,5 +1,5 @@
 DROP PROCEDURE IF EXISTS proximity_search;
-
+#split#
 CREATE PROCEDURE proximity_search (IN city_id INT UNSIGNED, k INT UNSIGNED, ccode CHAR(2))
 BEGIN
 	SELECT @lat := latitude, @lon := longitude FROM City WHERE id = city_id;
