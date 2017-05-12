@@ -61,6 +61,32 @@ async def proximity_search(req):
 	return json(rs)
 
 
+@webapi.route('/v0/city/proximity_search2')
+async def proximity_search2(req):
+	'''
+	Proximity search #2 for cities:
+	The city identifier/value pair should be provided as the first 
+	positional query parameter. Limit the city count with query 
+	parameter k (defaults to 10). Limit the country in the origin 
+	and result set queries with query parameter ccode.
+	example:
+	http://citysearch:8080/v0/city/proximity_search2?name=Daly%20City&k=10
+	http://citysearch:8080/v0/city/proximity_search2?geonameid=3039154&k=100&ccode=US
+	'''
+	akey = list(req.args.keys())[0]
+	avalue = list(req.args.values())[0][0]
+	if 'k' in req.args:
+		k = int(req.args['k'][0])
+	else:
+		k = 10
+	if 'ccode' in req.args:
+		ccode = req.args['ccode'][0]
+	else:
+		ccode = None
+	rs = cityapi.proximity_search2(akey, avalue, k, ccode)
+	return json(rs)
+
+
 @webapi.route('/v0/city/text_search')
 async def text_search(req):
 	'''

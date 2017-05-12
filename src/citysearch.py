@@ -1,17 +1,21 @@
 """
 A city search module.
+This module has mixed concerns about data fetching,
+database schema, database inserts, web caching, and web responses.
 """
 
 import io
 import os
 import re
 import time
+import random
 import zipfile
 import concurrent.futures
 
 import requests
 import numpy as np
 import pandas as pd
+from rtree import index as rtree
 
 import logger
 from mariadb import SQL
@@ -77,9 +81,9 @@ class DataLoader:
 		df.longitude = df.longitude.astype('float32')
 		#df.population = df.population.astype('uint64')
 		#df.elevation = df.elevation.astype('float32')
+		df.index = df.index + 1 # Use 1 based indexing.
 		df.reset_index(drop = False, inplace = True)
 		df.rename(columns = {'index':'id'}, inplace = True)
-		df.id = df.id + 1 # Sphinx doesnt like 0 based indexing
 		assert df.shape[1] == len(cols) + 1
 		return df
 
@@ -165,6 +169,8 @@ def bootstrap():
 	logger.info('Bootstrapping CitySearch...')
 	dl = DataLoader()
 	dl.download()
+	logger.info('Waiting a second for databases...')
+	time.sleep(8)
 	webcache = dl.persist()
 	logger.info('Bootstrapping is complete.')
 	return webcache
@@ -179,9 +185,23 @@ class CityAPI:
 		""" Load data into databases and cache."""
 		time.sleep(4) # Wait a sec for databases...
 		df = bootstrap()
+		logger.info('Generating cache indexes...')
 		self.df = df
 		self.df_geonameid = df.set_index('geonameid')[['id']]
 		self.df_name = df.set_index('name')[['id']]
+		geoslice = df[['id','longitude','latitude']]
+		rgeo = rtree.Rtree()
+		for i in range(1, len(geoslice)):
+			rgeo.insert(i, tuple(geoslice.iloc[i][1:].tolist()))
+		self.rgeo = rgeo # geographic index
+		self.df_coords = geoslice.set_index('id')
+		#self.df = None # Drop unused bulk.
+		logger.info('Cache index generation complete.')
+
+
+	def city_coords(self, city_id):
+		""" Get city coordinates from city_id."""
+		return self.df_coords.loc[city_id].tolist()
 
 
 	def keyval_search(self, akey, avalue, country_code = None):
@@ -195,7 +215,7 @@ class CityAPI:
 		elif akey == 'name':
 			return int(self.df_name.loc[avalue].id)
 		try:
-			sql = SQL.pool()
+			sql = SQL.singleton(random.randint(0,16))
 			if country_code:
 				sqltxt = 'SELECT id FROM City WHERE '+akey+' = %s and country_code = %s;'
 				city_id = int(sql.fetchone(sqltxt, (avalue, country_code))[0])
@@ -216,10 +236,23 @@ class CityAPI:
 		k = int(k)
 		city_id = self.keyval_search(akey, avalue, country_code)
 		sqltxt = 'proximity_search'
-		sql = SQL.pool()
+		sql = SQL.singleton(random.randint(0,16))
 		params = (city_id, k, country_code)
 		rs = sql.fetchproc(sqltxt, params, jsonify = True)
 		return rs[:-1][0]
+
+
+	def proximity_search2(self, akey, avalue, k, country_code = None):
+		""" RTree+MariaDB based proximity search. """
+		if akey not in colset():
+			return {}
+		if country_code and len(country_code) != 2:
+			return {}
+		k = int(k)
+		city_id = self.keyval_search(akey, avalue, country_code)
+		coords = self.city_coords(city_id)
+		rs = self.df.loc[self.rgeo.nearest(coords, k)].to_json(orient = 'values')
+		return rs
 
 
 	def text_search(self, atext):
@@ -229,7 +262,7 @@ class CityAPI:
 		city_ids = spx.fetchall("SELECT id FROM rt WHERE MATCH('"+atext+"')")
 		city_ids = [str(int(x[0])) for x in city_ids] # Ensure these are safe.
 		city_ids = ','.join(city_ids)
-		sql = SQL.pool()
+		sql = SQL.singleton(random.randint(0,16))
 		rs = sql.fetchall('SELECT * FROM City WHERE id IN ('+city_ids+');', jsonify = True)
 		return rs
 

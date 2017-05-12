@@ -6,13 +6,14 @@ ENV TERM screen-256color
 RUN apt-get update && apt-get upgrade -y
 RUN apt-get install -y build-essential gcc g++ python3-dev
 RUN apt-get install -y mariadb-client-10.0 libmysqlclient-dev vim less
+RUN apt-get install -y libspatialindex-dev
 
 # Add Python extras:
 RUN pip install -U pip \
 	&& pip install -U cython numpy pandas ipython ipdb \
 	&& pip install -U requests sanic aiohttp aiodns \
 	&& pip install -U sqlalchemy mysqlclient aiomysql \
-	&& pip install -U cachetools aiocache
+	&& pip install -U cachetools aiocache rtree
 
 EXPOSE 8080
 COPY . /usr/local/citysearch/
