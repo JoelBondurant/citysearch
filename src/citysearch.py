@@ -209,11 +209,20 @@ class CityAPI:
 		if akey not in colset():
 			return None # No SQL injection here.
 		if akey == 'geonameid':
-			return int(self.df_geonameid.loc[avalue].id)
+			ids = self.df_geonameid.loc[avalue].id
+			if len(ids) < 1:
+				return None
+			return int(ids.iloc[0])
 		if akey == 'name' and country_code and len(country_code) == 2:
-			return int(self.df_name[self.df_name.country_code == country_code].loc[avalue].id)
+			ids = self.df_name[self.df_name.country_code == country_code].loc[avalue].id
+			if len(ids) < 1:
+				return None
+			return int(ids.iloc[0])
 		elif akey == 'name':
-			return int(self.df_name.loc[avalue].id)
+			ids = self.df_name.loc[avalue].id
+			if len(ids) < 1:
+				return None
+			return int(ids.iloc[0])
 		try:
 			sql = SQL.singleton(random.randint(0,16))
 			if country_code:
@@ -235,6 +244,8 @@ class CityAPI:
 			return {}
 		k = int(k)
 		city_id = self.keyval_search(akey, avalue, country_code)
+		if city_id is None:
+			return {}
 		sqltxt = 'proximity_search'
 		sql = SQL.singleton(random.randint(0,16))
 		params = (city_id, k, country_code)
@@ -250,6 +261,8 @@ class CityAPI:
 			return {}
 		k = int(k)
 		city_id = self.keyval_search(akey, avalue, country_code)
+		if city_id is None:
+			return {}
 		coords = self.city_coords(city_id)
 		rs = self.df.loc[self.rgeo.nearest(coords, k)].to_json(orient = 'records')
 		return rs
