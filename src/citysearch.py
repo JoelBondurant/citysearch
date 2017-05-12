@@ -251,7 +251,7 @@ class CityAPI:
 		k = int(k)
 		city_id = self.keyval_search(akey, avalue, country_code)
 		coords = self.city_coords(city_id)
-		rs = self.df.loc[self.rgeo.nearest(coords, k)].to_json(orient = 'values')
+		rs = self.df.loc[self.rgeo.nearest(coords, k)].to_json(orient = 'records')
 		return rs
 
 
