@@ -209,17 +209,38 @@ class CityAPI:
 		if akey not in colset():
 			return None # No SQL injection here.
 		if akey == 'geonameid':
-			ids = self.df_geonameid.loc[avalue].id
+			try:
+				ids = self.df_geonameid.loc[avalue].id
+			except:
+				return None
+			try:
+				return int(ids)
+			except:
+				pass
 			if len(ids) < 1:
 				return None
 			return int(ids.iloc[0])
 		if akey == 'name' and country_code and len(country_code) == 2:
-			ids = self.df_name[self.df_name.country_code == country_code].loc[avalue].id
+			try:
+				ids = self.df_name[self.df_name.country_code == country_code].loc[avalue].id
+			except:
+				return None
+			try:
+				return int(ids)
+			except:
+				pass
 			if len(ids) < 1:
 				return None
 			return int(ids.iloc[0])
 		elif akey == 'name':
-			ids = self.df_name.loc[avalue].id
+			try:
+				ids = self.df_name.loc[avalue].id
+			except:
+				return None
+			try:
+				return int(ids)
+			except:
+				pass
 			if len(ids) < 1:
 				return None
 			return int(ids.iloc[0])
