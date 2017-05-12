@@ -1,0 +1,51 @@
+Starting wrk tests.
+
+Running 10s test @ http://127.0.0.1:8080/v0/city/hello
+  33 threads and 100 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency     5.73ms    4.27ms  34.24ms   68.92%
+    Req/Sec   567.11    351.48     2.02k    79.70%
+  186731 requests in 10.03s, 22.79MB read
+Requests/sec:  18609.07
+Transfer/sec:      2.27MB
+
+Running 10s test @ http://127.0.0.1:8080/v0/city/count
+  33 threads and 100 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency     8.18ms    5.56ms  87.33ms   79.48%
+    Req/Sec   385.38    202.85     2.56k    91.05%
+  127045 requests in 10.10s, 15.39MB read
+Requests/sec:  12580.41
+Transfer/sec:      1.52MB
+
+Running 10s test @ http://127.0.0.1:8080/v0/city/proximity_search?name=Daly%20City&k=10
+  33 threads and 100 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency   580.09ms  426.98ms   1.98s    82.40%
+    Req/Sec     4.69      4.77    20.00     74.81%
+  350 requests in 10.10s, 2.26MB read
+  Socket errors: connect 0, read 0, write 0, timeout 83
+Requests/sec:     34.66
+Transfer/sec:    229.27KB
+
+Running 10s test @ http://127.0.0.1:8080/v0/city/proximity_search2?name=Daly%20City&k=10
+  33 threads and 100 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency   246.52ms  276.02ms   1.47s    80.57%
+    Req/Sec    39.38     34.94   151.00     66.59%
+  6176 requests in 10.10s, 29.94MB read
+Requests/sec:    611.43
+Transfer/sec:      2.96MB
+
+Running 10s test @ http://127.0.0.1:8080/v0/city/text_search?q=San%20Francisco
+  33 threads and 100 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency   170.70ms  275.72ms   1.16s    85.08%
+    Req/Sec    58.54     43.70   260.00     77.18%
+  13326 requests in 10.10s, 112.37MB read
+  Socket errors: connect 0, read 0, write 0, timeout 50
+  Non-2xx or 3xx responses: 2411
+Requests/sec:   1319.54
+Transfer/sec:     11.13MB
+
+Finished wrk tests.
